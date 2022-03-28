@@ -1,0 +1,11 @@
+{
+  "name": "lexifine.io",
+  "version": "1.0.0",
+  "description": "Serverside code for the lexfine.io project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jen und Fabsen",
+  "license": "ISC"
+}
