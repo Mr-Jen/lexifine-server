@@ -1,4 +1,3 @@
-const { v4: uuidv4 } = require('uuid');
 require('dotenv').config()
 const http = require('http');
 const express = require('express');
@@ -11,6 +10,10 @@ const io = socketio(server, {
   }
 });
 
+const {
+  createLobby
+} = require('./utils/lobbies');
+
 console.log(process.env.ALLOWED_CLIENT_ENDPOINT)
 
 const PORT = process.env.PORT || 3001;
@@ -19,14 +22,19 @@ server.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`)
 });
 
-app.get('/generate-id', (req,res) => {
-  console.log("Requesting id")
-  res.json({id: uuidv4()});
-})
-
 // Run when client connects
 io.on('connection', socket => {
     console.log("User connected with socketId: ", socket.id);
+
+    socket.on("create-lobby", covername => {
+      const lobbyId = createLobby(covername, socket.id)
+      socket.emit("create-lobby", lobbyId)
+    })
+
+    socket.on("join-lobby", ({lobbyId, covername}) => {
+      console.log("User joing lobby: ", covername, lobbyId)
+    })
+
     // Runs when client disconnects
     socket.on('disconnect', (reason) => {
         console.log("User disconnected with socketId: ", socket.id);
