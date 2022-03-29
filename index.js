@@ -11,7 +11,8 @@ const io = socketio(server, {
 });
 
 const {
-  createLobby
+  createLobby,
+  joinLobby
 } = require('./utils/lobbies');
 
 console.log(process.env.ALLOWED_CLIENT_ENDPOINT)
@@ -32,7 +33,26 @@ io.on('connection', socket => {
     })
 
     socket.on("join-lobby", ({lobbyId, covername}) => {
-      console.log("User joing lobby: ", covername, lobbyId)
+      console.log("User joining lobby: ", covername, lobbyId)
+      const lobby = joinLobby(covername, lobbyId, socket.id)
+
+      // Emit to joining user
+      socket.emit("join-lobby", {
+        hostId: lobby.hostId,
+        players: lobby.players,
+      })
+
+      // Emit to users already inside lobby
+      const playersWithoutJoinedPlayer = lobby.players.filter(({id}) => id !== socket.id)
+
+      playersWithoutJoinedPlayer.forEach(({id}) => {
+        io.to(id).emit("join-lobby", {
+          player: {
+            id: socket.id,
+            covername
+          }
+        })
+      });
     })
 
     // Runs when client disconnects

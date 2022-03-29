@@ -23,6 +23,21 @@ const createLobby =  (covername, socketId) => {
     return lobbyId;
 }
 
+const joinLobby = (covername, lobbyId, socketId) => {
+    const lobby = findLobbyById(lobbyId)
+    lobby.players.push({
+        id: socketId,
+        covername: covername
+    })
+
+    return lobby;
+}
+
+const findLobbyById = (lobbyId) => {
+    return lobbies.find(({id}) => id === lobbyId)
+}
+
 module.exports =  {
-    createLobby
+    createLobby,
+    joinLobby
 }
