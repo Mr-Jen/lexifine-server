@@ -1,10 +1,11 @@
 require('dotenv').config()
 const http = require('http');
+const cors = require('cors')
 const express = require('express');
 const socketio = require('socket.io');
 const app = express();
 const server = http.createServer(app);
-const io = socketio(server, {
+const io = socketio(server,{
   cors: {
     origin: '*',
   }
@@ -12,7 +13,9 @@ const io = socketio(server, {
 
 const {
   createLobby,
-  joinLobby
+  joinLobby,
+  leaveLobby,
+  findLobbyByLobbyId
 } = require('./utils/lobbies');
 
 console.log(process.env.ALLOWED_CLIENT_ENDPOINT)
@@ -21,6 +24,17 @@ const PORT = process.env.PORT || 3001;
   
 server.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`)
+});
+
+app.use(cors())
+
+app.get('/lobby/:lobbyId', function(req, res) {
+  const lobbyIdValid = findLobbyByLobbyId(req.params.lobbyId);
+  if (lobbyIdValid) {
+    res.sendStatus(200)
+  } else {
+    res.sendStatus(404)
+  }
 });
 
 // Run when client connects
@@ -55,8 +69,9 @@ io.on('connection', socket => {
       });
     })
 
-    // Runs when client disconnects
-    socket.on('disconnect', (reason) => {
-        console.log("User disconnected with socketId: ", socket.id);
-    });
+    socket.on("disconnect", () => {
+      console.log("User disconnected")
+      const lobby = leaveLobby(socket.id) 
+      lobby && lobby.players.forEach(({id}) => io.to(id).emit('leave-lobby', socket.id))
+    })
 });
