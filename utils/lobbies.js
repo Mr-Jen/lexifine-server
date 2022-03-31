@@ -65,5 +65,6 @@ module.exports =  {
     createLobby,
     joinLobby,
     leaveLobby,
-    findLobbyByLobbyId
+    findLobbyByLobbyId,
+    findLobbyByPlayerId
 }

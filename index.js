@@ -15,8 +15,13 @@ const {
   createLobby,
   joinLobby,
   leaveLobby,
-  findLobbyByLobbyId
+  findLobbyByLobbyId,
+  findLobbyByPlayerId
 } = require('./utils/lobbies');
+
+const {
+  initGame
+} = require('./utils/game')
 
 console.log(process.env.ALLOWED_CLIENT_ENDPOINT)
 
@@ -67,6 +72,14 @@ io.on('connection', socket => {
           }
         })
       });
+    })
+
+    socket.on("init-game", () => {
+      const lobby = findLobbyByPlayerId(socket.id)
+      const gameSettings = initGame(lobby)
+      lobby.game.players.forEach(({id}) => {
+        io.to(id).emit("init-game", gameSettings)
+      })
     })
 
     socket.on("disconnect", () => {
