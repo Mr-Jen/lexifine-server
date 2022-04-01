@@ -20,12 +20,17 @@ const {
 } = require('./utils/lobbies');
 
 const {
-  initGame
+  initGame,
+  startDefinePhase
 } = require('./utils/game')
 
 console.log(process.env.ALLOWED_CLIENT_ENDPOINT)
 
 const PORT = process.env.PORT || 3001;
+
+const broadcastToPlayers = (players, eventName, payload) => {
+  players.forEach(({id}) => io.to(id).emit(eventName, payload))
+}
   
 server.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`)
@@ -64,27 +69,28 @@ io.on('connection', socket => {
       // Emit to users already inside lobby
       const playersWithoutJoinedPlayer = lobby.players.filter(({id}) => id !== socket.id)
 
-      playersWithoutJoinedPlayer.forEach(({id}) => {
-        io.to(id).emit("join-lobby", {
-          player: {
-            id: socket.id,
-            covername
-          }
-        })
-      });
+      broadcastToPlayers(playersWithoutJoinedPlayer, "join-lobby", {
+        player: {
+          id: socket.id,
+          covername
+        }
+      })
     })
 
     socket.on("init-game", () => {
       const lobby = findLobbyByPlayerId(socket.id)
       const gameSettings = initGame(lobby)
-      lobby.game.players.forEach(({id}) => {
-        io.to(id).emit("init-game", gameSettings)
-      })
+      broadcastToPlayers(lobby.players, "init-game", gameSettings)
+      const payload = startDefinePhase(lobby.game)
+      setTimeout(() => {
+        broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
+      }, 3500)
     })
 
     socket.on("disconnect", () => {
       console.log("User disconnected")
       const lobby = leaveLobby(socket.id) 
-      lobby && lobby.players.forEach(({id}) => io.to(id).emit('leave-lobby', socket.id))
+      //lobby && lobby.players.forEach(({id}) => io.to(id).emit('leave-lobby', socket.id))
+      lobby && broadcastToPlayers(lobby.players, "leave-lobby", socket.id)
     })
-});
+})
