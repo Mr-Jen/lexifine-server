@@ -49,21 +49,18 @@ const startDefinePhase = (game) => {
   }
 }
 
-/*
-  phase: "define",
-  timerStart: 3844738473847,
-  currentRound: 1,
-  termToDefine: "Holzofen",
-  definitions: [
-    {
-      id: "2392393-23820389203-28328939-3i293",
-      definition: "Dies ist die richtige Definition",
-      createdBy: "game"
-    }
-  ]
-*/
+const submitDefinition = (playerId, definition, game) => {
+  game.definitions.push({
+    id: uuidv4(),
+    definition,
+    createdBy: playerId
+  })
+  game.players.find(({id}) => id === playerId).isReady = true
+  console.log("Game after submiting defintion: ", game)
+}
 
 module.exports = {
   initGame,
-  startDefinePhase
+  startDefinePhase,
+  submitDefinition
 }

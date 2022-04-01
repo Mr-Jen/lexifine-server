@@ -21,7 +21,8 @@ const {
 
 const {
   initGame,
-  startDefinePhase
+  startDefinePhase,
+  submitDefinition
 } = require('./utils/game')
 
 console.log(process.env.ALLOWED_CLIENT_ENDPOINT)
@@ -85,6 +86,12 @@ io.on('connection', socket => {
       setTimeout(() => {
         broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
       }, 3500)
+    })
+
+    socket.on("define-submit", definition => {
+      const lobby = findLobbyByPlayerId(socket.id)
+      submitDefinition(socket.id, definition, lobby.game)
+      broadcastToPlayers(lobby.game.players, "define-submit", socket.id)
     })
 
     socket.on("disconnect", () => {
