@@ -59,8 +59,14 @@ const submitDefinition = (playerId, definition, game) => {
   console.log("Game after submiting defintion: ", game)
 }
 
+const changeReady = (playerId, game) => {
+  console.log("Inside unready serverside")
+  game.players.find(({id}) => id === playerId).isReady = true
+}
+
 module.exports = {
   initGame,
   startDefinePhase,
-  submitDefinition
+  submitDefinition,
+  changeReady
 }

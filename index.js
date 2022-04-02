@@ -22,7 +22,8 @@ const {
 const {
   initGame,
   startDefinePhase,
-  submitDefinition
+  submitDefinition,
+  changeReady
 } = require('./utils/game')
 
 console.log(process.env.ALLOWED_CLIENT_ENDPOINT)
@@ -91,7 +92,14 @@ io.on('connection', socket => {
     socket.on("define-submit", definition => {
       const lobby = findLobbyByPlayerId(socket.id)
       submitDefinition(socket.id, definition, lobby.game)
-      broadcastToPlayers(lobby.game.players, "define-submit", socket.id)
+      broadcastToPlayers(lobby.game.players, "ready-change", socket.id)
+    })
+
+    socket.on("ready-change", () => {
+      const lobby = findLobbyByPlayerId(socket.id)
+      changeReady(socket.id, lobby.game)
+      console.log("Game players after change ready: ", lobby.game.players)
+      broadcastToPlayers(lobby.game.players, "ready-change", socket.id)
     })
 
     socket.on("disconnect", () => {
