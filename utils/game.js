@@ -61,7 +61,8 @@ const submitDefinition = (playerId, definition, game) => {
 
 const changeReady = (playerId, game) => {
   console.log("Inside unready serverside")
-  game.players.find(({id}) => id === playerId).isReady = true
+  const readyPlayer = game.players.find(({id}) => id === playerId)
+  readyPlayer.isReady = !readyPlayer.isReady
 }
 
 module.exports = {
