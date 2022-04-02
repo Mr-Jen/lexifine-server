@@ -23,8 +23,12 @@ const {
   initGame,
   startDefinePhase,
   submitDefinition,
-  changeReady
+  unready
 } = require('./utils/game')
+
+const {
+  shuffle
+} = require('./helpers/shuffle')
 
 console.log(process.env.ALLOWED_CLIENT_ENDPOINT)
 
@@ -91,15 +95,31 @@ io.on('connection', socket => {
 
     socket.on("define-submit", definition => {
       const lobby = findLobbyByPlayerId(socket.id)
-      submitDefinition(socket.id, definition, lobby.game)
-      broadcastToPlayers(lobby.game.players, "ready-change", socket.id)
+      const allGhostwritersAreReady = submitDefinition(socket.id, definition, lobby.game)
+      if (allGhostwritersAreReady){
+        console.log("Everyone is ready")
+        lobby.game.definitions = shuffle(lobby.game.definitions)
+        lobby.game.players.filter(({id}) => id !== lobby.game.talkmasterId)
+          .forEach(({id}) => 
+          {
+            const myDefinitionId = lobby.game.definitions.find(({createdBy}) => createdBy === id).id
+            io.to(id).emit('start-vote-phase', {
+              myDefinitionId,
+              definitions: lobby.game.definitions.map(({id}) => ({id}))
+            })
+          })
+        io.to(lobby.game.talkmasterId).emit('start-vote-phase', {
+          definitions: lobby.game.definitions
+        })
+      }
+      !allGhostwritersAreReady && broadcastToPlayers(lobby.game.players, "define-submit", socket.id)
     })
 
-    socket.on("ready-change", () => {
+    socket.on("unready", () => {
       const lobby = findLobbyByPlayerId(socket.id)
-      changeReady(socket.id, lobby.game)
-      console.log("Game players after change ready: ", lobby.game.players)
-      broadcastToPlayers(lobby.game.players, "ready-change", socket.id)
+      unready(socket.id, lobby.game)
+      console.log("Game players after unready: ", lobby.game.players)
+      broadcastToPlayers(lobby.game.players, "unready", socket.id)
     })
 
     socket.on("disconnect", () => {
