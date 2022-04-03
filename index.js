@@ -23,7 +23,9 @@ const {
   initGame,
   startDefinePhase,
   submitDefinition,
-  unready
+  unready,
+  startVotePhase,
+  initGameSettings
 } = require('./utils/game')
 
 const {
@@ -34,8 +36,24 @@ console.log(process.env.ALLOWED_CLIENT_ENDPOINT)
 
 const PORT = process.env.PORT || 3001;
 
+// Helper functions
 const broadcastToPlayers = (players, eventName, payload) => {
   players.forEach(({id}) => io.to(id).emit(eventName, payload))
+}
+
+const broadcastStartVotePhase = lobby => {
+  lobby.game.players.filter(({id}) => id !== lobby.game.talkmasterId)
+      .forEach(({id}) => 
+      {
+        const myDefinitionId = lobby.game.definitions.find(({createdBy}) => createdBy === id).id
+        io.to(id).emit('start-vote-phase', {
+          myDefinitionId,
+          definitions: lobby.game.definitions.map(({id}) => ({id}))
+        })
+      })
+    io.to(lobby.game.talkmasterId).emit('start-vote-phase', {
+      definitions: lobby.game.definitions
+    })
 }
   
 server.listen(PORT, () => {
@@ -91,26 +109,21 @@ io.on('connection', socket => {
       setTimeout(() => {
         broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
       }, 3500)
+      setTimeout(() => {
+        if (lobby.game.phase !== 'define') return
+        startVotePhase(lobby.game)
+        broadcastStartVotePhase(lobby)
+      }, (initGameSettings.roundSettings.definitionPhaseDuration + 1) * 1000)
     })
 
     socket.on("define-submit", definition => {
       const lobby = findLobbyByPlayerId(socket.id)
+      if (lobby.game.phase !== 'define') return
       const allGhostwritersAreReady = submitDefinition(socket.id, definition, lobby.game)
       if (allGhostwritersAreReady){
         console.log("Everyone is ready")
-        lobby.game.definitions = shuffle(lobby.game.definitions)
-        lobby.game.players.filter(({id}) => id !== lobby.game.talkmasterId)
-          .forEach(({id}) => 
-          {
-            const myDefinitionId = lobby.game.definitions.find(({createdBy}) => createdBy === id).id
-            io.to(id).emit('start-vote-phase', {
-              myDefinitionId,
-              definitions: lobby.game.definitions.map(({id}) => ({id}))
-            })
-          })
-        io.to(lobby.game.talkmasterId).emit('start-vote-phase', {
-          definitions: lobby.game.definitions
-        })
+        startVotePhase(lobby.game)
+        broadcastStartVotePhase(lobby)
       }
       !allGhostwritersAreReady && broadcastToPlayers(lobby.game.players, "define-submit", socket.id)
     })

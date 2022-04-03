@@ -1,11 +1,14 @@
 const { v4: uuidv4 } = require("uuid");
+const {shuffle} = require('../helpers/shuffle.js')
 
-initGameSettings = {
+const initGameSettings = {
     roundSettings: {
         max: 3,
-        definitionPhaseDuration: 90,
+        definitionPhaseDuration: 13.5,
     },
 };
+
+const defaultDefinition = "Ich war Gassi gehen und habe keine Definition abgegeben"
 
 const initGame = (lobby) => {
     lobby.game = {
@@ -77,9 +80,28 @@ const unready = (playerId, game) => {
     readyPlayer.isReady = false;
 };
 
+const startVotePhase = game => {
+    game.players.filter(({id}) => id !== game.talkmasterId)
+        .forEach(player => {
+            const definition = game.definitions.find(({createdBy}) => createdBy === player.id)
+            !definition && game.definitions.push({
+                id: uuidv4(),
+                definition: defaultDefinition,
+                createdBy: player.id
+            })
+        })
+    game.definitions = shuffle(game.definitions)
+    game.phase = 'vote'
+    game.players.filter(({id}) => id !== game.talkmasterId)
+        .forEach(player => player.isReady = false)  
+    console.log("Game in StartVotePhase: ", game)
+}
+
 module.exports = {
     initGame,
     startDefinePhase,
     submitDefinition,
     unready,
+    startVotePhase,
+    initGameSettings
 };
