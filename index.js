@@ -25,6 +25,8 @@ const {
   submitDefinition,
   unready,
   startVotePhase,
+  submitVote,
+  setVotePhaseEndTimer,
   initGameSettings
 } = require('./utils/game')
 
@@ -113,7 +115,7 @@ io.on('connection', socket => {
         if (lobby.game.phase !== 'define') return
         startVotePhase(lobby.game)
         broadcastStartVotePhase(lobby)
-      }, (initGameSettings.roundSettings.definitionPhaseDuration + 1) * 1000)
+      }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
     })
 
     socket.on("define-submit", definition => {
@@ -125,7 +127,26 @@ io.on('connection', socket => {
         startVotePhase(lobby.game)
         broadcastStartVotePhase(lobby)
       }
-      !allGhostwritersAreReady && broadcastToPlayers(lobby.game.players, "define-submit", socket.id)
+      !allGhostwritersAreReady && broadcastToPlayers(lobby.game.players, "ready", {playerId: socket.id})
+    })
+
+    socket.on("vote-submit", definitionId => {
+      const lobby = findLobbyByPlayerId(socket.id)
+      if (lobby.game.phase !== 'vote') return
+      const allButOneGhostwriterReady = submitVote(definitionId, socket.id, lobby.game)
+      if(allButOneGhostwriterReady){
+        const timerStart = setVotePhaseEndTimer(lobby.game)
+        setTimeout(() => {
+          console.log("STARTING SCOREBOARD PHASE")
+        }, initGameSettings.roundSettings.votePhaseEndDuration)
+        broadcastToPlayers(lobby.game.players, "ready", {
+          playerId: socket.id,
+          timerStart
+        })
+      } else {
+        broadcastToPlayers(lobby.game.players, "ready", {playerId: socket.id})
+      }
+      
     })
 
     socket.on("unready", () => {
