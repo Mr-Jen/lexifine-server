@@ -26,21 +26,23 @@ const {
   unready,
   startVotePhase,
   submitVote,
+  startPresentPhase,
+  presentNextPlayer,
   setVotePhaseEndTimer,
+  getNumOfUnreadyPlayers,
+  startScoreboardPhase,
+  getGhostwriters,
   initGameSettings
 } = require('./utils/game')
-
-const {
-  shuffle
-} = require('./helpers/shuffle')
-
-console.log(process.env.ALLOWED_CLIENT_ENDPOINT)
 
 const PORT = process.env.PORT || 3001;
 
 // Helper functions
 const broadcastToPlayers = (players, eventName, payload) => {
-  players.forEach(({id}) => io.to(id).emit(eventName, payload))
+  players.forEach(({id}) => {
+    io.to(id).emit(eventName, payload)
+    console.log(`[${id}]: (${eventName})`, payload)
+  })
 }
 
 const broadcastStartVotePhase = lobby => {
@@ -56,6 +58,7 @@ const broadcastStartVotePhase = lobby => {
     io.to(lobby.game.talkmasterId).emit('start-vote-phase', {
       definitions: lobby.game.definitions
     })
+    console.log("Sent 'start-vote-phase' event")
 }
   
 server.listen(PORT, () => {
@@ -78,12 +81,14 @@ io.on('connection', socket => {
     console.log("User connected with socketId: ", socket.id);
 
     socket.on("create-lobby", covername => {
+      console.log("Received 'create-lobby' event")
       const lobbyId = createLobby(covername, socket.id)
       socket.emit("create-lobby", lobbyId)
+      console.log("Sent 'create-lobby' event")
     })
 
     socket.on("join-lobby", ({lobbyId, covername}) => {
-      console.log("User joining lobby: ", covername, lobbyId)
+      console.log("Received 'join-lobby' event")
       const lobby = joinLobby(covername, lobbyId, socket.id)
 
       // Emit to joining user
@@ -101,9 +106,11 @@ io.on('connection', socket => {
           covername
         }
       })
+      console.log("Sent 'join-lobby' event")
     })
 
     socket.on("init-game", () => {
+      console.log("Received 'init-game' event")
       const lobby = findLobbyByPlayerId(socket.id)
       const gameSettings = initGame(lobby)
       broadcastToPlayers(lobby.players, "init-game", gameSettings)
@@ -119,45 +126,90 @@ io.on('connection', socket => {
     })
 
     socket.on("define-submit", definition => {
+      console.log("Received 'define-submit' event")
       const lobby = findLobbyByPlayerId(socket.id)
       if (lobby.game.phase !== 'define') return
-      const allGhostwritersAreReady = submitDefinition(socket.id, definition, lobby.game)
+      submitDefinition(socket.id, definition, lobby.game)
+      const allGhostwritersAreReady = getNumOfUnreadyPlayers(lobby.game) === 0
       if (allGhostwritersAreReady){
-        console.log("Everyone is ready")
         startVotePhase(lobby.game)
         broadcastStartVotePhase(lobby)
       }
-      !allGhostwritersAreReady && broadcastToPlayers(lobby.game.players, "ready", {playerId: socket.id})
+      if (!allGhostwritersAreReady) {
+        broadcastToPlayers(lobby.game.players, "ready", {playerId: socket.id})
+        console.log("Sent 'ready' event")
+      }
     })
 
     socket.on("vote-submit", definitionId => {
+      console.log("Received 'vote-submit' event")
       const lobby = findLobbyByPlayerId(socket.id)
       if (lobby.game.phase !== 'vote') return
-      const allButOneGhostwriterReady = submitVote(definitionId, socket.id, lobby.game)
+      submitVote(definitionId, socket.id, lobby.game)
+      const numOfReadyPlayers = getNumOfUnreadyPlayers(lobby.game)
+      const allButOneGhostwriterReady = numOfReadyPlayers === 1
+      const allGhostwritersReady = numOfReadyPlayers === 0
       if(allButOneGhostwriterReady){
         const timerStart = setVotePhaseEndTimer(lobby.game)
         setTimeout(() => {
-          console.log("STARTING SCOREBOARD PHASE")
+          if(lobby.game.phase === "vote"){
+            startPresentPhase(lobby.game)
+            broadcastToPlayers(lobby.game.players, 'start-present-phase')
+            console.log("Sent 'start-present-phase' event")
+          }
         }, initGameSettings.roundSettings.votePhaseEndDuration)
         broadcastToPlayers(lobby.game.players, "ready", {
           playerId: socket.id,
           timerStart
         })
-      } else {
+        console.log("Sent 'ready' event")
+      } else if (allGhostwritersReady) {
+        startPresentPhase(lobby.game)
+        broadcastToPlayers(lobby.game.players, 'start-present-phase')
+        console.log("Sent 'start-present-phase' event")
+      } 
+      else {
         broadcastToPlayers(lobby.game.players, "ready", {playerId: socket.id})
+        console.log("Sent 'ready' event")
       }
-      
+    })
+
+    socket.on("present-next-player", () => {
+      console.log("Received 'present-next-player' event")
+      const lobby = findLobbyByPlayerId(socket.id)
+      const gameChanges = presentNextPlayer(lobby.game)
+      broadcastToPlayers(getGhostwriters(lobby.game), "present-next-player", gameChanges)
+      io.to(lobby.game.talkmasterId).emit('present-next-player', { players: gameChanges.players})
+      console.log("Sent 'present-next-player' event")
+    })
+
+    socket.on("start-scoreboard-phase", () => {
+      console.log("Received 'start-scoreboard-phase' event")
+      const lobby = findLobbyByPlayerId(socket.id)
+      const timerStart = startScoreboardPhase(lobby.game)
+      broadcastToPlayers(lobby.game.players, "start-scoreboard-phase", timerStart)
+      setTimeout(() => {
+        const payload = startDefinePhase(lobby.game)
+        broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
+        console.log("Sent 'start-define-phase' event")
+        setTimeout(() => {
+          if (lobby.game.phase !== 'define') return
+          startVotePhase(lobby.game)
+          broadcastStartVotePhase(lobby)
+        }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
+      }, initGameSettings.roundSettings.scoreboardPhaseDuration)
     })
 
     socket.on("unready", () => {
+      console.log("Received 'unready' event")
       const lobby = findLobbyByPlayerId(socket.id)
       unready(socket.id, lobby.game)
-      console.log("Game players after unready: ", lobby.game.players)
       broadcastToPlayers(lobby.game.players, "unready", socket.id)
+      console.log("Sent 'unready' event")
     })
 
     socket.on("disconnect", () => {
-      console.log("User disconnected")
+      console.log("Received 'disconnect' event")
       const lobby = leaveLobby(socket.id) 
       //lobby && lobby.players.forEach(({id}) => io.to(id).emit('leave-lobby', socket.id))
       lobby && broadcastToPlayers(lobby.players, "leave-lobby", socket.id)

@@ -17,8 +17,6 @@ const createLobby =  (covername, socketId) => {
     }
 
     lobbies.push(newLobby);
-    console.log("CURRENT LOBBIES: ", lobbies)
-    console.log(newLobby.players)
 
     return lobbyId;
 }
@@ -39,7 +37,6 @@ const leaveLobby = (playerId) => {
     lobby.players = lobby.players.filter(({id}) => id !== playerId)
     if(lobby.players.length === 0){
         lobbies = lobbies.filter(({id}) => id !== lobby.id)
-        console.log(lobbies)
         return
     }
     if(lobby.hostId === playerId){
