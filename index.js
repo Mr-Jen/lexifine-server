@@ -89,12 +89,15 @@ io.on('connection', socket => {
 
     socket.on("join-lobby", ({lobbyId, covername}) => {
       console.log("Received 'join-lobby' event")
-      const lobby = joinLobby(covername, lobbyId, socket.id)
+      const joinedlobby = joinLobby(covername, lobbyId, socket.id)
+      const lobby = findLobbyByPlayerId(socket.id)
+      const gameAlreadyStarted = lobby.game && Object.keys(lobby.game).length !== 0
 
       // Emit to joining user
       socket.emit("join-lobby", {
-        hostId: lobby.hostId,
-        players: lobby.players,
+        hostId: joinedlobby.hostId,
+        players: joinedlobby.players,
+        gameAlreadyStarted
       })
 
       // Emit to users already inside lobby
@@ -189,6 +192,11 @@ io.on('connection', socket => {
       const timerStart = startScoreboardPhase(lobby.game)
       broadcastToPlayers(lobby.game.players, "start-scoreboard-phase", timerStart)
       setTimeout(() => {
+        if (lobby.game.currentRound === initGameSettings.roundSettings.max){
+          broadcastToPlayers(lobby.players, 'end-game') 
+          delete lobby.game          
+          return
+        }
         const payload = startDefinePhase(lobby.game)
         broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
         console.log("Sent 'start-define-phase' event")

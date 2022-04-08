@@ -5,7 +5,7 @@ const { shuffle } = require("../helpers/shuffle.js");
 
 const initGameSettings = {
     roundSettings: {
-        max: 3,
+        max: 1,
         definitionPhaseDuration: 13.5 * 1000,
         votePhaseEndDuration: 15 * 1000,
         scoreboardPhaseDuration: 15 * 1000,
