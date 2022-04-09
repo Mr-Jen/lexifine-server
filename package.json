@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "develop": "nodemon index.js",
-    "format": "npx prettier --write ."
+    "format": "npx prettier --ignore-path .gitignore --write ."
   },
   "author": "Jen und Fabsen",
   "license": "ISC",
