@@ -181,8 +181,7 @@ io.on('connection', socket => {
       console.log("Received 'present-next-player' event")
       const lobby = findLobbyByPlayerId(socket.id)
       const gameChanges = presentNextPlayer(lobby.game)
-      broadcastToPlayers(getGhostwriters(lobby.game), "present-next-player", gameChanges)
-      io.to(lobby.game.talkmasterId).emit('present-next-player', { players: gameChanges.players})
+      broadcastToPlayers(lobby.game.players, "present-next-player", gameChanges)
       console.log("Sent 'present-next-player' event")
     })
 
