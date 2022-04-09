@@ -6,12 +6,15 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "develop": "nodemon index.js",
-    "format": "npx prettier --ignore-path .gitignore --write ."
+    "format": "npx prettier --ignore-path .gitignore --write .",
+    "prepare": "husky install"
   },
   "author": "Jen und Fabsen",
   "license": "ISC",
   "devDependencies": {
     "dotenv": "^16.0.0",
+    "husky": "^7.0.4",
+    "lint-staged": "^12.3.7",
     "nodemon": "^2.0.15",
     "prettier": "^2.6.2"
   },
@@ -20,5 +23,8 @@
     "express": "^4.17.3",
     "socket.io": "^4.4.1",
     "uuid": "^8.3.2"
+  },
+  "lint-staged": {
+    "*.{js,css,md}": "prettier --write"
   }
 }
