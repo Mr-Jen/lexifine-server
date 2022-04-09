@@ -15,6 +15,9 @@ const {
   createLobby,
   joinLobby,
   leaveLobby,
+  leaveGame,
+  isIngame,
+  addToPendingLeaves,
   findLobbyByLobbyId,
   findLobbyByPlayerId
 } = require('./utils/lobbies');
@@ -31,7 +34,6 @@ const {
   setVotePhaseEndTimer,
   getNumOfUnreadyPlayers,
   startScoreboardPhase,
-  getGhostwriters,
   initGameSettings
 } = require('./utils/game')
 
@@ -199,6 +201,10 @@ io.on('connection', socket => {
           delete lobby.game          
           return
         }
+        lobby.pendingLeaves.forEach(playerId => {
+          const remainingLobby = leaveGame(lobby, playerId)
+          remainingLobby && broadcastToPlayers(lobby.game.players, "leave-lobby", playerId)
+        })
         const payload = startDefinePhase(lobby.game)
         broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
         console.log("Sent 'start-define-phase' event")
@@ -220,8 +226,24 @@ io.on('connection', socket => {
 
     socket.on("disconnect", () => {
       console.log("Received 'disconnect' event")
-      const lobby = leaveLobby(socket.id) 
-      //lobby && lobby.players.forEach(({id}) => io.to(id).emit('leave-lobby', socket.id))
-      lobby && broadcastToPlayers(lobby.players, "leave-lobby", socket.id)
+      const lobby = findLobbyByPlayerId(socket.id)
+      if(isIngame(lobby, socket.id)){
+        const isTalkmaster = socket.id === lobby.game.talkmasterId
+        if (isTalkmaster) {
+          const remainingLobby = leaveGame(lobby, socket.id)
+          if (remainingLobby) {
+            console.log("Leaving remaining lobby ingame")
+            broadcastToPlayers(lobby.players, 'end-game') 
+            broadcastToPlayers(lobby.players, "leave-lobby", socket.id)
+            delete lobby.game  
+          }
+        } else {
+          addToPendingLeaves(lobby, socket.id)
+        }
+      } else {
+        const remainingLobby = leaveLobby(lobby, socket.id) 
+        console.log("Leaving lobby outside game")
+        remainingLobby && broadcastToPlayers(lobby.players, "leave-lobby", socket.id)
+      }
     })
 })
