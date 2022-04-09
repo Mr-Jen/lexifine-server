@@ -5,10 +5,10 @@ const { shuffle } = require("../helpers/shuffle.js");
 
 const initGameSettings = {
     roundSettings: {
-        max: 1,
+        max: 2,
         definitionPhaseDuration: 13.5 * 1000,
         votePhaseEndDuration: 15 * 1000,
-        scoreboardPhaseDuration: 15 * 1000,
+        scoreboardPhaseDuration: 5 * 1000,
     },
 };
 
@@ -36,7 +36,13 @@ const getNumOfUnreadyPlayers = (game) => {
 const startDefinePhase = (game) => {
     game.phase = "define";
     game.timerStart = new Date().getTime();
-    game.currentRound += 1;
+    if (game.talkmasterId === game.players[game.players.length-1].id) {
+        game.currentRound += 1;
+        game.talkmasterId = undefined
+    }
+    if (game.currentRound === 0) {
+        game.currentRound = 1
+    }
     game.termToDefine = "Holzofen";
     game.definitions = [
         {

@@ -188,10 +188,13 @@ io.on('connection', socket => {
     socket.on("start-scoreboard-phase", () => {
       console.log("Received 'start-scoreboard-phase' event")
       const lobby = findLobbyByPlayerId(socket.id)
+      const gamePlayers = lobby.game.players
       const timerStart = startScoreboardPhase(lobby.game)
       broadcastToPlayers(lobby.game.players, "start-scoreboard-phase", timerStart)
+      const lastRotation = lobby.game.talkmasterId === gamePlayers[gamePlayers.length - 1].id
       setTimeout(() => {
-        if (lobby.game.currentRound === initGameSettings.roundSettings.max){
+        console.log("Round Count before next rotation", lobby.game.currentRound, lastRotation)
+        if (lobby.game.currentRound === initGameSettings.roundSettings.max && lastRotation){
           broadcastToPlayers(lobby.players, 'end-game') 
           delete lobby.game          
           return
