@@ -19,7 +19,9 @@ const {
   isIngame,
   addToPendingLeaves,
   findLobbyByLobbyId,
-  findLobbyByPlayerId
+  findLobbyByPlayerId,
+  addTimeoutToLobby,
+  clearAllLobbyTimeouts
 } = require('./utils/lobbies');
 
 const {
@@ -120,14 +122,16 @@ io.on('connection', socket => {
       const gameSettings = initGame(lobby)
       broadcastToPlayers(lobby.players, "init-game", gameSettings)
       const payload = startDefinePhase(lobby.game)
-      setTimeout(() => {
+      const startDefinePhaseTimeout = setTimeout(() => {
         broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
       }, 3500)
-      setTimeout(() => {
+      addTimeoutToLobby(lobby, startDefinePhaseTimeout)
+      const startVotePhaseTimeout = setTimeout(() => {
         if (lobby.game.phase !== 'define') return
         startVotePhase(lobby.game)
         broadcastStartVotePhase(lobby)
       }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
+      addTimeoutToLobby(lobby, startVotePhaseTimeout)
     })
 
     socket.on("define-submit", definition => {
@@ -156,13 +160,14 @@ io.on('connection', socket => {
       const allGhostwritersReady = numOfReadyPlayers === 0
       if(allButOneGhostwriterReady){
         const timerStart = setVotePhaseEndTimer(lobby.game)
-        setTimeout(() => {
+        const startPresentPhaseTimeout = setTimeout(() => {
           if(lobby.game.phase === "vote"){
             startPresentPhase(lobby.game)
             broadcastToPlayers(lobby.game.players, 'start-present-phase')
             console.log("Sent 'start-present-phase' event")
           }
         }, initGameSettings.roundSettings.votePhaseEndDuration)
+        addTimeoutToLobby(lobby, startPresentPhaseTimeout)
         broadcastToPlayers(lobby.game.players, "ready", {
           playerId: socket.id,
           timerStart
@@ -194,7 +199,7 @@ io.on('connection', socket => {
       const timerStart = startScoreboardPhase(lobby.game)
       broadcastToPlayers(lobby.game.players, "start-scoreboard-phase", timerStart)
       const lastRotation = lobby.game.talkmasterId === gamePlayers[gamePlayers.length - 1].id
-      setTimeout(() => {
+      const nextRotationTimeout = setTimeout(() => {
         console.log("Round Count before next rotation", lobby.game.currentRound, lastRotation)
         if (lobby.game.currentRound === initGameSettings.roundSettings.max && lastRotation){
           broadcastToPlayers(lobby.players, 'end-game') 
@@ -208,12 +213,14 @@ io.on('connection', socket => {
         const payload = startDefinePhase(lobby.game)
         broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
         console.log("Sent 'start-define-phase' event")
-        setTimeout(() => {
+        const startVotePhaseTimeout = setTimeout(() => {
           if (lobby.game.phase !== 'define') return
           startVotePhase(lobby.game)
           broadcastStartVotePhase(lobby)
         }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
+        addTimeoutToLobby(lobby, startVotePhaseTimeout)
       }, initGameSettings.roundSettings.scoreboardPhaseDuration)
+      addTimeoutToLobby(lobby, nextRotationTimeout)
     })
 
     socket.on("unready", () => {
@@ -235,6 +242,8 @@ io.on('connection', socket => {
             console.log("Leaving remaining lobby ingame")
             broadcastToPlayers(lobby.players, 'end-game') 
             broadcastToPlayers(lobby.players, "leave-lobby", socket.id)
+            broadcastToPlayers(lobby.players, "error", "Boo... Der Talkmaster hat die laufende Runde verlassen. Das Spiel wurde abgebrochen.")
+            clearAllLobbyTimeouts(lobby)
             delete lobby.game  
           }
         } else {

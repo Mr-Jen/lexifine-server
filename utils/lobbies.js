@@ -2,12 +2,17 @@ const { v4: uuidv4 } = require('uuid');
 
 let lobbies = []
 
+const addTimeoutToLobby = (lobby, timeout) => {
+    lobby.timeouts.push(timeout)
+}
+
 const createLobby =  (covername, socketId) => {
     const lobbyId = uuidv4();
     
     const newLobby = { 
         id: lobbyId,
         hostId: socketId,
+        timeouts: [],
         pendingLeaves: [],
         players: [
             {
@@ -73,6 +78,12 @@ const findLobbyByPlayerId = playerId => {
                 ({id}) => id === playerId))
 }
 
+const clearAllLobbyTimeouts = lobby => {
+    lobby.timeouts.forEach(timeout => {
+        clearTimeout(timeout)
+    })
+}
+
 module.exports =  {
     createLobby,
     joinLobby,
@@ -81,5 +92,7 @@ module.exports =  {
     addToPendingLeaves,
     findLobbyByLobbyId,
     findLobbyByPlayerId,
-    isIngame
+    isIngame,
+    addTimeoutToLobby,
+    clearAllLobbyTimeouts
 }
