@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "develop": "nodemon index.js",
     "format": "npx prettier --ignore-path .gitignore --write .",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "start": "node index.js"
   },
   "author": "Jen und Fabsen",
   "license": "ISC",
