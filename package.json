@@ -13,7 +13,6 @@
   "author": "Jen und Fabsen",
   "license": "ISC",
   "devDependencies": {
-    "dotenv": "^16.0.0",
     "husky": "^7.0.4",
     "lint-staged": "^12.3.7",
     "nodemon": "^2.0.15",
@@ -22,6 +21,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "csv-parse": "^5.0.4",
+    "dotenv": "^16.0.0",
     "express": "^4.17.3",
     "socket.io": "^4.4.1",
     "uuid": "^8.3.2"
