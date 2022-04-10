@@ -75,6 +75,7 @@ app.use(cors())
 
 app.get('/lobby/:lobbyId', function (req, res) {
   const lobbyIdValid = findLobbyByLobbyId(req.params.lobbyId)
+  console.log("-------------- ", lobbyIdValid, " --------------")
   if (lobbyIdValid) {
     res.sendStatus(200)
   } else {
@@ -247,6 +248,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log("Received 'disconnect' event")
     const lobby = findLobbyByPlayerId(socket.id)
+    if(!lobby) return
     if (isIngame(lobby, socket.id)) {
       const isTalkmaster = socket.id === lobby.game.talkmasterId
       if (isTalkmaster) {
