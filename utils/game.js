@@ -3,6 +3,21 @@ const {shuffle} = require('../helpers/shuffle.js')
 
 // 50///50 - Edit
 
+const { parse } = require('csv-parse/sync')
+const fs = require('fs')
+const path = require('path')
+
+const {
+    pickLexiconEntry
+} = require('../helpers/pickLexiconEntry')
+
+const articles = fs.readFileSync(path.join(__dirname, '..', 'data', 'lexiconEntries.csv'), { encoding: 'utf-8' })
+
+const DEFINITIONS = parse(articles, {
+  columns: true,
+  skip_empty_lines: true
+})
+
 const initGameSettings = {
   roundSettings: {
     max: 2,
@@ -12,8 +27,7 @@ const initGameSettings = {
   },
 }
 
-const defaultDefinition =
-  'Ich war Gassi gehen und habe keine Definition abgegeben'
+const defaultDefinition = 'Ich war Gassi gehen und habe keine Definition abgegeben'
 
 const initGame = (lobby) => {
   lobby.game = {
@@ -43,11 +57,12 @@ const startDefinePhase = (game) => {
   if (game.currentRound === 0) {
     game.currentRound = 1
   }
-  game.termToDefine = 'Holzofen'
+  const lexiconEntry = pickLexiconEntry(DEFINITIONS)
+  game.termToDefine = lexiconEntry.termToDefine
   game.definitions = [
     {
       id: uuidv4(),
-      definition: 'Dies ist die richtige Definition',
+      definition: lexiconEntry.definition,
       createdBy: 'game',
     },
   ]
