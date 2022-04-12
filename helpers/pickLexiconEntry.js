@@ -1,5 +1,6 @@
 const pickLexiconEntry = definitions => {
-    return definitions[Math.floor(Math.random() * definitions.length - 1)]
+    const definition = definitions[Math.round(Math.random() * (definitions.length - 1))]
+    return definition
 }
 
 module.exports = {

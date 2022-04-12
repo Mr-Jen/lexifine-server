@@ -11,7 +11,7 @@ const {
     pickLexiconEntry
 } = require('../helpers/pickLexiconEntry')
 
-const articles = fs.readFileSync(path.join(__dirname, '..', 'data', 'lexiconEntries.csv'), { encoding: 'utf-8' })
+const articles = fs.readFileSync(path.join(__dirname, '..', 'data', 'newEntries.csv'), { encoding: 'utf-8' })
 
 const DEFINITIONS = parse(articles, {
   columns: true,
