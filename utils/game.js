@@ -3,19 +3,20 @@ const {shuffle} = require('../helpers/shuffle.js')
 
 // 50///50 - Edit
 
-const { parse } = require('csv-parse/sync')
+const {parse} = require('csv-parse/sync')
 const fs = require('fs')
 const path = require('path')
 
-const {
-    pickLexiconEntry
-} = require('../helpers/pickLexiconEntry')
+const {pickLexiconEntry} = require('../helpers/pickLexiconEntry')
 
-const articles = fs.readFileSync(path.join(__dirname, '..', 'data', 'newEntries.csv'), { encoding: 'utf-8' })
+const articles = fs.readFileSync(
+  path.join(__dirname, '..', 'data', 'newEntries.csv'),
+  {encoding: 'utf-8'}
+)
 
 const DEFINITIONS = parse(articles, {
   columns: true,
-  skip_empty_lines: true
+  skip_empty_lines: true,
 })
 
 const initGameSettings = {
@@ -27,7 +28,8 @@ const initGameSettings = {
   },
 }
 
-const defaultDefinition = 'Ich war Gassi gehen und habe keine Definition abgegeben'
+const defaultDefinition =
+  'Ich war Gassi gehen und habe keine Definition abgegeben'
 
 const initGame = (lobby) => {
   lobby.game = {
@@ -47,15 +49,25 @@ const getNumOfUnreadyPlayers = (game) => {
   ).length
 }
 
-const startDefinePhase = (game) => {
+const startDefinePhase = (game, {skipTerm} = {skipTerm: false}) => {
   game.phase = 'define'
   game.timerStart = new Date().getTime()
-  if (game.talkmasterId === game.players[game.players.length - 1].id) {
-    game.currentRound += 1
-    game.talkmasterId = undefined
-  }
-  if (game.currentRound === 0) {
-    game.currentRound = 1
+  if (!skipTerm) {
+    if (game.talkmasterId === game.players[game.players.length - 1].id) {
+      game.currentRound += 1
+      game.talkmasterId = undefined
+    }
+    if (game.currentRound === 0) {
+      game.currentRound = 1
+    }
+    if (game.talkmasterId) {
+      const talkmasterIndex = game.players.findIndex(
+        ({id}) => id === game.talkmasterId
+      )
+      game.talkmasterId = game.players[talkmasterIndex + 1].id
+    } else {
+      game.talkmasterId = game.players[0].id
+    }
   }
   const lexiconEntry = pickLexiconEntry(DEFINITIONS)
   game.termToDefine = lexiconEntry.termToDefine
@@ -66,14 +78,6 @@ const startDefinePhase = (game) => {
       createdBy: 'game',
     },
   ]
-  if (game.talkmasterId) {
-    const talkmasterIndex = game.players.findIndex(
-      ({id}) => id === game.talkmasterId
-    )
-    game.talkmasterId = game.players[talkmasterIndex + 1].id
-  } else {
-    game.talkmasterId = game.players[0].id
-  }
   game.players
     .filter(({id}) => id !== game.talkmasterId)
     .forEach((player) => (player.isReady = false))

@@ -75,7 +75,7 @@ app.use(cors())
 
 app.get('/lobby/:lobbyId', function (req, res) {
   const lobbyIdValid = findLobbyByLobbyId(req.params.lobbyId)
-  console.log("-------------- ", lobbyIdValid, " --------------")
+  console.log('-------------- ', lobbyIdValid, ' --------------')
   if (lobbyIdValid) {
     res.sendStatus(200)
   } else {
@@ -132,6 +132,19 @@ io.on('connection', (socket) => {
       broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
     }, 3500)
     addTimeoutToLobby(lobby, startDefinePhaseTimeout)
+    const startVotePhaseTimeout = setTimeout(() => {
+      if (lobby.game.phase !== 'define') return
+      startVotePhase(lobby.game)
+      broadcastStartVotePhase(lobby)
+    }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
+    addTimeoutToLobby(lobby, startVotePhaseTimeout)
+  })
+
+  socket.on('skip-term', () => {
+    console.log("Received 'skip-term' event")
+    const lobby = findLobbyByPlayerId(socket.id)
+    const payload = startDefinePhase(lobby.game, {skipTerm: true})
+    broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
     const startVotePhaseTimeout = setTimeout(() => {
       if (lobby.game.phase !== 'define') return
       startVotePhase(lobby.game)
@@ -248,7 +261,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log("Received 'disconnect' event")
     const lobby = findLobbyByPlayerId(socket.id)
-    if(!lobby) return
+    if (!lobby) return
     if (isIngame(lobby, socket.id)) {
       const isTalkmaster = socket.id === lobby.game.talkmasterId
       if (isTalkmaster) {
