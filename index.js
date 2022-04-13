@@ -143,6 +143,7 @@ io.on('connection', (socket) => {
   socket.on('skip-term', () => {
     console.log("Received 'skip-term' event")
     const lobby = findLobbyByPlayerId(socket.id)
+    clearAllLobbyTimeouts(lobby)
     const payload = startDefinePhase(lobby.game, {skipTerm: true})
     broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
     const startVotePhaseTimeout = setTimeout(() => {
