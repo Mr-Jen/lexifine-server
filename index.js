@@ -170,6 +170,19 @@ io.on('connection', (socket) => {
     }
   })
 
+  socket.on('definition-title-submit', ({definitionId, title}) => {
+    console.log("Received 'definition-title-submit' event")
+    const lobby = findLobbyByPlayerId(socket.id)
+    console.log(definitionId, title, lobby.game.definitions)
+    const definition = lobby.game.definitions.find(({id}) => definitionId === id)
+    const cleanedTitle = title.toUpperCase().replace(/[^\w\s]|_/g, "")
+    definition.title = cleanedTitle
+    broadcastToPlayers(lobby.game.players, "definition-title-submit", {
+      definitionId,
+      title: cleanedTitle
+    })
+  })
+
   socket.on('vote-submit', (definitionId) => {
     console.log("Received 'vote-submit' event")
     const lobby = findLobbyByPlayerId(socket.id)
