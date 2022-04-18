@@ -232,16 +232,14 @@ io.on('connection', (socket) => {
     broadcastToPlayers(lobby.game.players, 'start-scoreboard-phase', timerStart)
     const lastRotation =
       lobby.game.talkmasterId === gamePlayers[gamePlayers.length - 1].id
+    const isLastRoundAndRotation = lobby.game.currentRound === initGameSettings.roundSettings.max && lastRotation
     const nextRotationTimeout = setTimeout(() => {
       console.log(
         'Round Count before next rotation',
         lobby.game.currentRound,
         lastRotation
       )
-      if (
-        lobby.game.currentRound === initGameSettings.roundSettings.max &&
-        lastRotation
-      ) {
+      if (isLastRoundAndRotation) {
         broadcastToPlayers(lobby.players, 'end-game')
         delete lobby.game
         return
@@ -260,7 +258,7 @@ io.on('connection', (socket) => {
         broadcastStartVotePhase(lobby)
       }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
       addTimeoutToLobby(lobby, startVotePhaseTimeout)
-    }, initGameSettings.roundSettings.scoreboardPhaseDuration)
+    }, isLastRoundAndRotation ? initGameSettings.roundSettings.finalScoreboardPhaseDuration : initGameSettings.roundSettings.scoreboardPhaseDuration)
     addTimeoutToLobby(lobby, nextRotationTimeout)
   })
 

@@ -21,10 +21,11 @@ const DEFINITIONS = parse(articles, {
 
 const initGameSettings = {
   roundSettings: {
-    max: 2,
-    definitionPhaseDuration: 90 * 1000,
+    max: 1, //2
+    definitionPhaseDuration: 120 * 1000,
     votePhaseEndDuration: 10 * 1000,
-    scoreboardPhaseDuration: 15 * 1000,
+    scoreboardPhaseDuration: 10 * 1000,
+    finalScoreboardPhaseDuration: 30 * 1000
   },
 }
 
