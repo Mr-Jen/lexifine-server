@@ -32,6 +32,18 @@ const initGameSettings = {
 const defaultDefinition =
   'Ich war Gassi gehen und habe keine Definition abgegeben'
 
+/*const gameExists = (lobby) => {
+  return lobby.game && Object.keys(lobby.game).length !== 0
+}*/
+
+const initGameGuard = (lobby, socketId) => {
+  //const gameExists = gameExists(lobby)
+  const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
+  const guestRequestedInit = lobby.hostId !== socketId
+  if(gameExists || guestRequestedInit) return false
+  return true
+}
+
 const initGame = (lobby) => {
   lobby.game = {
     ...initGameSettings,
@@ -48,6 +60,14 @@ const getNumOfUnreadyPlayers = (game) => {
   return game.players.filter(
     ({isReady, id}) => game.talkmasterId !== id && !isReady
   ).length
+}
+
+const skipTermGuard = (lobby, socketId) => {
+  const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
+  const talkmasterId = gameExists && lobby.game.talkmasterId
+  const talkmasterRequestedSkip = socketId === talkmasterId 
+  if(gameExists && talkmasterRequestedSkip) return true
+  return false
 }
 
 const startDefinePhase = (game, {skipTerm} = {skipTerm: false}) => {
@@ -90,6 +110,14 @@ const startDefinePhase = (game, {skipTerm} = {skipTerm: false}) => {
   }
 }
 
+const defineSubmitGuard = (lobby, socketId) => {
+  const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
+  const talkmasterId = gameExists && lobby.game.talkmasterId
+  const ghostwriterRequestedSubmit = socketId !== talkmasterId
+  if(gameExists && ghostwriterRequestedSubmit) return true
+  return false
+}
+
 const submitDefinition = (playerId, definition, game) => {
   const currentDefinition = game.definitions.find(
     ({createdBy}) => createdBy === playerId
@@ -111,10 +139,26 @@ const submitDefinition = (playerId, definition, game) => {
   return allGhostwritersAreReady
 }
 
+const voteSubmitGuard = (lobby, socketId) => {
+  const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
+  const talkmasterId = gameExists && lobby.game.talkmasterId
+  const ghostwriterRequestedSubmit = socketId !== talkmasterId
+  if(gameExists && ghostwriterRequestedSubmit) return true
+  return false
+}
+
 const submitVote = (definitionId, playerId, game) => {
   const player = game.players.find(({id}) => id === playerId)
   player.voteId = definitionId
   player.isReady = true
+}
+
+const definitionTitleSubmitGuard = (lobby, socketId) => {
+  const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
+  const talkmasterId = gameExists && lobby.game.talkmasterId
+  const talkmasterRequestedTitleSubmit = socketId === talkmasterId
+  if(gameExists && talkmasterRequestedTitleSubmit) return true
+  return false
 }
 
 const startPresentPhase = (game) => {
@@ -227,14 +271,19 @@ const startScoreboardPhase = (game) => {
 }
 
 module.exports = {
+  initGameGuard,
   initGame,
   startDefinePhase,
+  skipTermGuard,
+  defineSubmitGuard,
   submitDefinition,
+  definitionTitleSubmitGuard,
   unready,
   startVotePhase,
   startPresentPhase,
   presentNextPlayer,
   getGhostwriters,
+  voteSubmitGuard,
   submitVote,
   setVotePhaseEndTimer,
   getNumOfUnreadyPlayers,

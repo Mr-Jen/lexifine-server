@@ -25,11 +25,16 @@ const {
 } = require('./utils/lobbies')
 
 const {
+  initGameGuard,
   initGame,
   startDefinePhase,
+  skipTermGuard,
+  defineSubmitGuard,
   submitDefinition,
+  definitionTitleSubmitGuard,
   unready,
   startVotePhase,
+  voteSubmitGuard,
   submitVote,
   startPresentPhase,
   presentNextPlayer,
@@ -125,94 +130,153 @@ io.on('connection', (socket) => {
   socket.on('init-game', () => {
     console.log("Received 'init-game' event")
     const lobby = findLobbyByPlayerId(socket.id)
-    const gameSettings = initGame(lobby)
-    broadcastToPlayers(lobby.players, 'init-game', gameSettings)
-    const payload = startDefinePhase(lobby.game)
-    const startDefinePhaseTimeout = setTimeout(() => {
-      broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
-    }, 3500)
-    addTimeoutToLobby(lobby, startDefinePhaseTimeout)
-    const startVotePhaseTimeout = setTimeout(() => {
-      if (lobby.game.phase !== 'define') return
-      startVotePhase(lobby.game)
-      broadcastStartVotePhase(lobby)
-    }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
-    addTimeoutToLobby(lobby, startVotePhaseTimeout)
+
+    // Check if init-game event allowed to be executed
+    const initGameAllowed = initGameGuard(lobby, socket.id)
+    if(initGameAllowed){      
+      const gameSettings = initGame(lobby)
+      broadcastToPlayers(lobby.players, 'init-game', gameSettings)
+      const payload = startDefinePhase(lobby.game)
+      const startDefinePhaseTimeout = setTimeout(() => {
+        broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
+      }, 3500)
+      addTimeoutToLobby(lobby, startDefinePhaseTimeout)
+      const startVotePhaseTimeout = setTimeout(() => {
+        if (lobby.game.phase !== 'define') return
+        startVotePhase(lobby.game)
+        broadcastStartVotePhase(lobby)
+      }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
+      addTimeoutToLobby(lobby, startVotePhaseTimeout)
+    } else {
+      console.log("Error: Game could not be initialized")
+      broadcastToPlayers(
+        lobby.players,
+        'error',
+        'Hoppla... Das Spiel konnte nicht gestartet werden'
+      )
+    }
   })
 
   socket.on('skip-term', () => {
     console.log("Received 'skip-term' event")
     const lobby = findLobbyByPlayerId(socket.id)
-    clearAllLobbyTimeouts(lobby)
-    const payload = startDefinePhase(lobby.game, {skipTerm: true})
-    broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
-    const startVotePhaseTimeout = setTimeout(() => {
-      if (lobby.game.phase !== 'define') return
-      startVotePhase(lobby.game)
-      broadcastStartVotePhase(lobby)
-    }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
-    addTimeoutToLobby(lobby, startVotePhaseTimeout)
+
+    // Check if skip-term event is allowed to be executed
+    const skipTermAllowed = skipTermGuard(lobby, socket.id)
+    if(skipTermAllowed){
+      clearAllLobbyTimeouts(lobby)
+      const payload = startDefinePhase(lobby.game, {skipTerm: true})
+      broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
+      const startVotePhaseTimeout = setTimeout(() => {
+        if (lobby.game.phase !== 'define') return
+        startVotePhase(lobby.game)
+        broadcastStartVotePhase(lobby)
+      }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
+      addTimeoutToLobby(lobby, startVotePhaseTimeout)
+    } else {
+      console.log("Error: Term could not be skipped")
+      broadcastToPlayers(
+        lobby.players,
+        'error',
+        'Hoppla... Der Begriff konnte nicht übersprungen werden'
+      )
+    }
   })
 
   socket.on('define-submit', (definition) => {
     console.log("Received 'define-submit' event")
     const lobby = findLobbyByPlayerId(socket.id)
-    if (lobby.game.phase !== 'define') return
-    submitDefinition(socket.id, definition, lobby.game)
-    const allGhostwritersAreReady = getNumOfUnreadyPlayers(lobby.game) === 0
-    if (allGhostwritersAreReady) {
-      startVotePhase(lobby.game)
-      broadcastStartVotePhase(lobby)
-    }
-    if (!allGhostwritersAreReady) {
-      broadcastToPlayers(lobby.game.players, 'ready', {playerId: socket.id})
-      console.log("Sent 'ready' event")
+
+    // Check if define-submit is allowed to be executed
+    const defineSubmitAllowed = defineSubmitGuard(lobby, socket.id)
+    if(defineSubmitAllowed){
+      if (lobby.game.phase !== 'define') return
+      submitDefinition(socket.id, definition, lobby.game)
+      const allGhostwritersAreReady = getNumOfUnreadyPlayers(lobby.game) === 0
+      if (allGhostwritersAreReady) {
+        startVotePhase(lobby.game)
+        broadcastStartVotePhase(lobby)
+      }
+      if (!allGhostwritersAreReady) {
+        broadcastToPlayers(lobby.game.players, 'ready', {playerId: socket.id})
+        console.log("Sent 'ready' event")
+      }
+    } else {
+      console.log("Error: Definition could not be submitted")
+      broadcastToPlayers(
+        lobby.players,
+        'error',
+        'Hoppla... Deine Definition konnte nicht abgegeben werden'
+      )
     }
   })
 
   socket.on('definition-title-submit', ({definitionId, title}) => {
     console.log("Received 'definition-title-submit' event")
     const lobby = findLobbyByPlayerId(socket.id)
-    console.log(definitionId, title, lobby.game.definitions)
-    const definition = lobby.game.definitions.find(({id}) => definitionId === id)
-    const cleanedTitle = title.toUpperCase().replace(/[^\w\s]|_/g, "")
-    definition.title = cleanedTitle
-    broadcastToPlayers(lobby.game.players, "definition-title-submit", {
-      definitionId,
-      title: cleanedTitle
-    })
+
+    // Check if definition-title-submit is allowed to be executed
+    const definitionTitleSubmitAllowed = definitionTitleSubmitGuard(lobby, socket.id)
+    if(definitionTitleSubmitAllowed){
+      //console.log(definitionId, title, lobby.game.definitions)
+      const definition = lobby.game.definitions.find(({id}) => definitionId === id)
+      const cleanedTitle = title.toUpperCase().replace(/[^\w\s]|_/g, "")
+      definition.title = cleanedTitle
+      broadcastToPlayers(lobby.game.players, "definition-title-submit", {
+        definitionId,
+        title: cleanedTitle
+      })
+    } else {
+      console.log("Error: Definition title could not be submitted")
+      broadcastToPlayers(
+        lobby.players,
+        'error',
+        'Hoppla... Dein ausgewählter Begriff konnte nicht abgegeben werden'
+      )
+    }
   })
 
   socket.on('vote-submit', (definitionId) => {
     console.log("Received 'vote-submit' event")
     const lobby = findLobbyByPlayerId(socket.id)
-    if (lobby.game.phase !== 'vote') return
-    submitVote(definitionId, socket.id, lobby.game)
-    const numOfReadyPlayers = getNumOfUnreadyPlayers(lobby.game)
-    const allButOneGhostwriterReady = numOfReadyPlayers === 1
-    const allGhostwritersReady = numOfReadyPlayers === 0
-    if (allButOneGhostwriterReady) {
-      const timerStart = setVotePhaseEndTimer(lobby.game)
-      const startPresentPhaseTimeout = setTimeout(() => {
-        if (lobby.game.phase === 'vote') {
-          startPresentPhase(lobby.game)
-          broadcastToPlayers(lobby.game.players, 'start-present-phase')
-          console.log("Sent 'start-present-phase' event")
-        }
-      }, initGameSettings.roundSettings.votePhaseEndDuration)
-      addTimeoutToLobby(lobby, startPresentPhaseTimeout)
-      broadcastToPlayers(lobby.game.players, 'ready', {
-        playerId: socket.id,
-        timerStart,
-      })
-      console.log("Sent 'ready' event")
-    } else if (allGhostwritersReady) {
-      startPresentPhase(lobby.game)
-      broadcastToPlayers(lobby.game.players, 'start-present-phase')
-      console.log("Sent 'start-present-phase' event")
+
+    const voteSubmitAllowed = voteSubmitGuard(lobby, socket.id)
+    if(voteSubmitAllowed){
+      if (lobby.game.phase !== 'vote') return
+      submitVote(definitionId, socket.id, lobby.game)
+      const numOfReadyPlayers = getNumOfUnreadyPlayers(lobby.game)
+      const allButOneGhostwriterReady = numOfReadyPlayers === 1
+      const allGhostwritersReady = numOfReadyPlayers === 0
+      if (allButOneGhostwriterReady) {
+        const timerStart = setVotePhaseEndTimer(lobby.game)
+        const startPresentPhaseTimeout = setTimeout(() => {
+          if (lobby.game.phase === 'vote') {
+            startPresentPhase(lobby.game)
+            broadcastToPlayers(lobby.game.players, 'start-present-phase')
+            console.log("Sent 'start-present-phase' event")
+          }
+        }, initGameSettings.roundSettings.votePhaseEndDuration)
+        addTimeoutToLobby(lobby, startPresentPhaseTimeout)
+        broadcastToPlayers(lobby.game.players, 'ready', {
+          playerId: socket.id,
+          timerStart,
+        })
+        console.log("Sent 'ready' event")
+      } else if (allGhostwritersReady) {
+        startPresentPhase(lobby.game)
+        broadcastToPlayers(lobby.game.players, 'start-present-phase')
+        console.log("Sent 'start-present-phase' event")
+      } else {
+        broadcastToPlayers(lobby.game.players, 'ready', {playerId: socket.id})
+        console.log("Sent 'ready' event")
+      }
     } else {
-      broadcastToPlayers(lobby.game.players, 'ready', {playerId: socket.id})
-      console.log("Sent 'ready' event")
+      console.log("Error: Vote could not be submitted")
+      broadcastToPlayers(
+        lobby.players,
+        'error',
+        'Hoppla... Deine Wahl konnte nicht bestätigt werden'
+      )
     }
   })
 
