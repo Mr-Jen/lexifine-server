@@ -25,7 +25,7 @@ const initGameSettings = {
     definitionPhaseDuration: 120 * 1000,
     votePhaseEndDuration: 10 * 1000,
     scoreboardPhaseDuration: 10 * 1000,
-    finalScoreboardPhaseDuration: 30 * 1000
+    finalScoreboardPhaseDuration: 50 * 1000
   },
 }
 
