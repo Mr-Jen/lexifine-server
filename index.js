@@ -133,7 +133,7 @@ io.on('connection', (socket) => {
 
     // Check if init-game event allowed to be executed
     const initGameAllowed = initGameGuard(lobby, socket.id)
-    if(initGameAllowed){      
+    if (initGameAllowed) {
       const gameSettings = initGame(lobby)
       broadcastToPlayers(lobby.players, 'init-game', gameSettings)
       const payload = startDefinePhase(lobby.game)
@@ -148,7 +148,7 @@ io.on('connection', (socket) => {
       }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
       addTimeoutToLobby(lobby, startVotePhaseTimeout)
     } else {
-      console.log("Error: Game could not be initialized")
+      console.log('Error: Game could not be initialized')
       broadcastToPlayers(
         lobby.players,
         'error',
@@ -163,10 +163,13 @@ io.on('connection', (socket) => {
 
     // Check if skip-term event is allowed to be executed
     const skipTermAllowed = skipTermGuard(lobby, socket.id)
-    if(skipTermAllowed){
+    if (skipTermAllowed) {
       clearAllLobbyTimeouts(lobby)
       const payload = startDefinePhase(lobby.game, {skipTerm: true})
-      broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
+      broadcastToPlayers(lobby.game.players, 'start-define-phase', {
+        ...payload,
+        skip: true,
+      })
       const startVotePhaseTimeout = setTimeout(() => {
         if (lobby.game.phase !== 'define') return
         startVotePhase(lobby.game)
@@ -174,7 +177,7 @@ io.on('connection', (socket) => {
       }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
       addTimeoutToLobby(lobby, startVotePhaseTimeout)
     } else {
-      console.log("Error: Term could not be skipped")
+      console.log('Error: Term could not be skipped')
       broadcastToPlayers(
         lobby.players,
         'error',
@@ -189,7 +192,7 @@ io.on('connection', (socket) => {
 
     // Check if define-submit is allowed to be executed
     const defineSubmitAllowed = defineSubmitGuard(lobby, socket.id)
-    if(defineSubmitAllowed){
+    if (defineSubmitAllowed) {
       if (lobby.game.phase !== 'define') return
       submitDefinition(socket.id, definition, lobby.game)
       const allGhostwritersAreReady = getNumOfUnreadyPlayers(lobby.game) === 0
@@ -202,7 +205,7 @@ io.on('connection', (socket) => {
         console.log("Sent 'ready' event")
       }
     } else {
-      console.log("Error: Definition could not be submitted")
+      console.log('Error: Definition could not be submitted')
       broadcastToPlayers(
         lobby.players,
         'error',
@@ -216,18 +219,22 @@ io.on('connection', (socket) => {
     const lobby = findLobbyByPlayerId(socket.id)
 
     // Check if definition-title-submit is allowed to be executed
-    const definitionTitleSubmitAllowed = definitionTitleSubmitGuard(lobby, socket.id)
-    if(definitionTitleSubmitAllowed){
+    const definitionTitleSubmitAllowed = definitionTitleSubmitGuard(
+      lobby,
+      socket.id
+    )
+    if (definitionTitleSubmitAllowed) {
       //console.log(definitionId, title, lobby.game.definitions)
-      const definition = lobby.game.definitions.find(({id}) => definitionId === id)
-      const cleanedTitle = title.toUpperCase().replace(/[^\w\s]|_/g, "")
-      definition.title = cleanedTitle
-      broadcastToPlayers(lobby.game.players, "definition-title-submit", {
+      const definition = lobby.game.definitions.find(
+        ({id}) => definitionId === id
+      )
+      definition.title = title
+      broadcastToPlayers(lobby.game.players, 'definition-title-submit', {
         definitionId,
-        title: cleanedTitle
+        title: definition.title,
       })
     } else {
-      console.log("Error: Definition title could not be submitted")
+      console.log('Error: Definition title could not be submitted')
       broadcastToPlayers(
         lobby.players,
         'error',
@@ -241,7 +248,7 @@ io.on('connection', (socket) => {
     const lobby = findLobbyByPlayerId(socket.id)
 
     const voteSubmitAllowed = voteSubmitGuard(lobby, socket.id)
-    if(voteSubmitAllowed){
+    if (voteSubmitAllowed) {
       if (lobby.game.phase !== 'vote') return
       submitVote(definitionId, socket.id, lobby.game)
       const numOfReadyPlayers = getNumOfUnreadyPlayers(lobby.game)
@@ -271,7 +278,7 @@ io.on('connection', (socket) => {
         console.log("Sent 'ready' event")
       }
     } else {
-      console.log("Error: Vote could not be submitted")
+      console.log('Error: Vote could not be submitted')
       broadcastToPlayers(
         lobby.players,
         'error',
@@ -296,33 +303,40 @@ io.on('connection', (socket) => {
     broadcastToPlayers(lobby.game.players, 'start-scoreboard-phase', timerStart)
     const lastRotation =
       lobby.game.talkmasterId === gamePlayers[gamePlayers.length - 1].id
-    const isLastRoundAndRotation = lobby.game.currentRound === initGameSettings.roundSettings.max && lastRotation
-    const nextRotationTimeout = setTimeout(() => {
-      console.log(
-        'Round Count before next rotation',
-        lobby.game.currentRound,
-        lastRotation
-      )
-      if (isLastRoundAndRotation) {
-        broadcastToPlayers(lobby.players, 'end-game')
-        delete lobby.game
-        return
-      }
-      lobby.pendingLeaves.forEach((playerId) => {
-        const remainingLobby = leaveGame(lobby, playerId)
-        remainingLobby &&
-          broadcastToPlayers(lobby.game.players, 'leave-lobby', playerId)
-      })
-      const payload = startDefinePhase(lobby.game)
-      broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
-      console.log("Sent 'start-define-phase' event")
-      const startVotePhaseTimeout = setTimeout(() => {
-        if (lobby.game.phase !== 'define') return
-        startVotePhase(lobby.game)
-        broadcastStartVotePhase(lobby)
-      }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
-      addTimeoutToLobby(lobby, startVotePhaseTimeout)
-    }, isLastRoundAndRotation ? initGameSettings.roundSettings.finalScoreboardPhaseDuration : initGameSettings.roundSettings.scoreboardPhaseDuration)
+    const isLastRoundAndRotation =
+      lobby.game.currentRound === initGameSettings.roundSettings.max &&
+      lastRotation
+    const nextRotationTimeout = setTimeout(
+      () => {
+        console.log(
+          'Round Count before next rotation',
+          lobby.game.currentRound,
+          lastRotation
+        )
+        if (isLastRoundAndRotation) {
+          broadcastToPlayers(lobby.players, 'end-game')
+          delete lobby.game
+          return
+        }
+        lobby.pendingLeaves.forEach((playerId) => {
+          const remainingLobby = leaveGame(lobby, playerId)
+          remainingLobby &&
+            broadcastToPlayers(lobby.game.players, 'leave-lobby', playerId)
+        })
+        const payload = startDefinePhase(lobby.game)
+        broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
+        console.log("Sent 'start-define-phase' event")
+        const startVotePhaseTimeout = setTimeout(() => {
+          if (lobby.game.phase !== 'define') return
+          startVotePhase(lobby.game)
+          broadcastStartVotePhase(lobby)
+        }, initGameSettings.roundSettings.definitionPhaseDuration + 1000)
+        addTimeoutToLobby(lobby, startVotePhaseTimeout)
+      },
+      isLastRoundAndRotation
+        ? initGameSettings.roundSettings.finalScoreboardPhaseDuration
+        : initGameSettings.roundSettings.scoreboardPhaseDuration
+    )
     addTimeoutToLobby(lobby, nextRotationTimeout)
   })
 
