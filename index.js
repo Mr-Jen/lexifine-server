@@ -166,7 +166,10 @@ io.on('connection', (socket) => {
     if (skipTermAllowed) {
       clearAllLobbyTimeouts(lobby)
       const payload = startDefinePhase(lobby.game, {skipTerm: true})
-      broadcastToPlayers(lobby.game.players, 'start-define-phase', payload)
+      broadcastToPlayers(lobby.game.players, 'start-define-phase', {
+        ...payload,
+        skip: true,
+      })
       const startVotePhaseTimeout = setTimeout(() => {
         if (lobby.game.phase !== 'define') return
         startVotePhase(lobby.game)
