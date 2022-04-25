@@ -10,7 +10,7 @@ const path = require('path')
 const {pickLexiconEntry} = require('../helpers/pickLexiconEntry')
 
 const articles = fs.readFileSync(
-  path.join(__dirname, '..', 'data', 'newEntries.csv'),
+  path.join(__dirname, '..', 'data', 'lexicon-25_04_22.csv'),
   {encoding: 'utf-8'}
 )
 
@@ -25,7 +25,7 @@ const initGameSettings = {
     definitionPhaseDuration: 120 * 1000,
     votePhaseEndDuration: 10 * 1000,
     scoreboardPhaseDuration: 10 * 1000,
-    finalScoreboardPhaseDuration: 30 * 1000
+    finalScoreboardPhaseDuration: 30 * 1000,
   },
 }
 
@@ -40,7 +40,7 @@ const initGameGuard = (lobby, socketId) => {
   //const gameExists = gameExists(lobby)
   const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
   const guestRequestedInit = lobby.hostId !== socketId
-  if(gameExists || guestRequestedInit) return false
+  if (gameExists || guestRequestedInit) return false
   return true
 }
 
@@ -65,8 +65,8 @@ const getNumOfUnreadyPlayers = (game) => {
 const skipTermGuard = (lobby, socketId) => {
   const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
   const talkmasterId = gameExists && lobby.game.talkmasterId
-  const talkmasterRequestedSkip = socketId === talkmasterId 
-  if(gameExists && talkmasterRequestedSkip) return true
+  const talkmasterRequestedSkip = socketId === talkmasterId
+  if (gameExists && talkmasterRequestedSkip) return true
   return false
 }
 
@@ -114,7 +114,7 @@ const defineSubmitGuard = (lobby, socketId) => {
   const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
   const talkmasterId = gameExists && lobby.game.talkmasterId
   const ghostwriterRequestedSubmit = socketId !== talkmasterId
-  if(gameExists && ghostwriterRequestedSubmit) return true
+  if (gameExists && ghostwriterRequestedSubmit) return true
   return false
 }
 
@@ -143,7 +143,7 @@ const voteSubmitGuard = (lobby, socketId) => {
   const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
   const talkmasterId = gameExists && lobby.game.talkmasterId
   const ghostwriterRequestedSubmit = socketId !== talkmasterId
-  if(gameExists && ghostwriterRequestedSubmit) return true
+  if (gameExists && ghostwriterRequestedSubmit) return true
   return false
 }
 
@@ -157,7 +157,7 @@ const definitionTitleSubmitGuard = (lobby, socketId) => {
   const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
   const talkmasterId = gameExists && lobby.game.talkmasterId
   const talkmasterRequestedTitleSubmit = socketId === talkmasterId
-  if(gameExists && talkmasterRequestedTitleSubmit) return true
+  if (gameExists && talkmasterRequestedTitleSubmit) return true
   return false
 }
 
