@@ -24,11 +24,10 @@ const createLobby = (covername, socketId) => {
 
   lobbies.push(newLobby)
 
-  return lobbyId
+  return newLobby
 }
 
-const joinLobby = (covername, lobbyId, socketId) => {
-  const lobby = findLobbyByLobbyId(lobbyId)
+const joinLobby = (covername, lobby, socketId) => {
   lobby.players.push({
     id: socketId,
     covername: covername,
@@ -41,7 +40,6 @@ const leaveLobby = (lobby, playerId) => {
   lobby.players = lobby.players.filter(({id}) => id !== playerId)
   if (lobby.players.length === 0) {
     lobbies = lobbies.filter(({id}) => id !== lobby.id)
-    console.log("Lobbies after last player left: ", lobbies)
     return
   }
   if (lobby.hostId === playerId) {
@@ -66,9 +64,7 @@ const addToPendingLeaves = (lobby, playerId) => {
   lobby.pendingLeaves.push(playerId)
 }
 
-// Helper functions
 const findLobbyByLobbyId = (lobbyId) => {
-  console.log("Lobbies: ", lobbies)
   return lobbies.find(({id}) => id === lobbyId)
 }
 

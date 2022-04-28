@@ -25,7 +25,7 @@ const initGameSettings = {
     definitionPhaseDuration: 120 * 1000,
     votePhaseEndDuration: 10 * 1000,
     scoreboardPhaseDuration: 10 * 1000,
-    finalScoreboardPhaseDuration: 50 * 1000
+    finalScoreboardPhaseDuration: 50 * 1000,
   },
 }
 
@@ -53,7 +53,7 @@ const initGame = (lobby) => {
       points: 0,
     })),
   }
-  return initGameSettings
+  return lobby.game
 }
 
 const getNumOfUnreadyPlayers = (game) => {
@@ -118,7 +118,7 @@ const defineSubmitGuard = (lobby, socketId) => {
   return false
 }
 
-const submitDefinition = (playerId, definition, game) => {
+const submitDefinition = (playerId, definition, game, ready) => {
   const currentDefinition = game.definitions.find(
     ({createdBy}) => createdBy === playerId
   )
@@ -131,12 +131,15 @@ const submitDefinition = (playerId, definition, game) => {
       createdBy: playerId,
     })
   }
-  game.players.find(({id}) => id === playerId).isReady = true
-  const allGhostwritersAreReady =
-    game.players.filter(({id, isReady}) => id !== game.talkmasterId && isReady)
-      .length ===
-    game.players.length - 1
-  return allGhostwritersAreReady
+  if (ready) {
+    game.players.find(({id}) => id === playerId).isReady = true
+    const allGhostwritersAreReady =
+      game.players.filter(
+        ({id, isReady}) => id !== game.talkmasterId && isReady
+      ).length ===
+      game.players.length - 1
+    return allGhostwritersAreReady
+  }
 }
 
 const voteSubmitGuard = (lobby, socketId) => {
@@ -147,10 +150,12 @@ const voteSubmitGuard = (lobby, socketId) => {
   return false
 }
 
-const submitVote = (definitionId, playerId, game) => {
+const submitVote = (definitionId, playerId, game, ready) => {
   const player = game.players.find(({id}) => id === playerId)
   player.voteId = definitionId
-  player.isReady = true
+  if (ready) {
+    player.isReady = true
+  }
 }
 
 const definitionTitleSubmitGuard = (lobby, socketId) => {
@@ -266,8 +271,6 @@ const startVotePhase = (game) => {
 
 const startScoreboardPhase = (game) => {
   game.phase = 'scoreboard'
-  game.timerStart = new Date().getTime()
-  return game.timerStart
 }
 
 module.exports = {
