@@ -47,6 +47,7 @@ app.get('/lobby/:lobbyId', function (req, res) {
     res.sendStatus(404)
   }
 })
+
 const broadcastToPlayers = (players, eventName, payload) => {
   players.forEach(({id}) => {
     io.to(id).emit(eventName, payload)

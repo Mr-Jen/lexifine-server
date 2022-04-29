@@ -5,10 +5,8 @@ let lobbies = []
 const addTimeoutToLobby = (lobby, timeout) => {
   lobby.timeouts.push(timeout)
 }
-
 const createLobby = (covername, socketId) => {
   const lobbyId = uuidv4()
-
   const newLobby = {
     id: lobbyId,
     hostId: socketId,
@@ -26,16 +24,13 @@ const createLobby = (covername, socketId) => {
 
   return newLobby
 }
-
 const joinLobby = (covername, lobby, socketId) => {
   lobby.players.push({
     id: socketId,
     covername: covername,
   })
-
   return lobby
 }
-
 const leaveLobby = (lobby, playerId) => {
   lobby.players = lobby.players.filter(({id}) => id !== playerId)
   if (lobby.players.length === 0) {
@@ -47,31 +42,25 @@ const leaveLobby = (lobby, playerId) => {
   }
   return lobby
 }
-
 const isIngame = (lobby, playerId) => {
   if (!lobby.game) return false
   return lobby.game.players.find(({id}) => id === playerId)
 }
-
 const leaveGame = (lobby, playerId) => {
   const remainingLobby = leaveLobby(lobby, playerId)
   lobby.game.players = lobby.game.players.filter(({id}) => id !== playerId)
   lobby.pendingLeaves.filter(({id}) => id !== playerId)
   return remainingLobby
 }
-
 const addToPendingLeaves = (lobby, playerId) => {
   lobby.pendingLeaves.push(playerId)
 }
-
 const findLobbyByLobbyId = (lobbyId) => {
   return lobbies.find(({id}) => id === lobbyId)
 }
-
 const findLobbyByPlayerId = (playerId) => {
   return lobbies.find(({players}) => players.find(({id}) => id === playerId))
 }
-
 const clearAllLobbyTimeouts = (lobby) => {
   lobby.timeouts.forEach((timeout) => {
     clearTimeout(timeout)

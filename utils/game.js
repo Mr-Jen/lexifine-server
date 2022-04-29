@@ -1,8 +1,6 @@
 const {v4: uuidv4} = require('uuid')
 const {shuffle} = require('../helpers/shuffle.js')
 
-// 50///50 - Edit
-
 const {parse} = require('csv-parse/sync')
 const fs = require('fs')
 const path = require('path')
@@ -28,22 +26,8 @@ const initGameSettings = {
     finalScoreboardPhaseDuration: 50 * 1000,
   },
 }
-
 const defaultDefinition =
   'Ich war Gassi gehen und habe keine Definition abgegeben'
-
-/*const gameExists = (lobby) => {
-  return lobby.game && Object.keys(lobby.game).length !== 0
-}*/
-
-const initGameGuard = (lobby, socketId) => {
-  //const gameExists = gameExists(lobby)
-  const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
-  const guestRequestedInit = lobby.hostId !== socketId
-  if (gameExists || guestRequestedInit) return false
-  return true
-}
-
 const initGame = (lobby) => {
   lobby.game = {
     ...initGameSettings,
@@ -55,21 +39,11 @@ const initGame = (lobby) => {
   }
   return lobby.game
 }
-
 const getNumOfUnreadyPlayers = (game) => {
   return game.players.filter(
     ({isReady, id}) => game.talkmasterId !== id && !isReady
   ).length
 }
-
-const skipTermGuard = (lobby, socketId) => {
-  const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
-  const talkmasterId = gameExists && lobby.game.talkmasterId
-  const talkmasterRequestedSkip = socketId === talkmasterId
-  if (gameExists && talkmasterRequestedSkip) return true
-  return false
-}
-
 const startDefinePhase = (game, {skipTerm} = {skipTerm: false}) => {
   game.phase = 'define'
   game.timerStart = new Date().getTime()
@@ -109,15 +83,6 @@ const startDefinePhase = (game, {skipTerm} = {skipTerm: false}) => {
     termToDefine: game.termToDefine,
   }
 }
-
-const defineSubmitGuard = (lobby, socketId) => {
-  const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
-  const talkmasterId = gameExists && lobby.game.talkmasterId
-  const ghostwriterRequestedSubmit = socketId !== talkmasterId
-  if (gameExists && ghostwriterRequestedSubmit) return true
-  return false
-}
-
 const submitDefinition = (playerId, definition, game, ready) => {
   const currentDefinition = game.definitions.find(
     ({createdBy}) => createdBy === playerId
@@ -141,15 +106,6 @@ const submitDefinition = (playerId, definition, game, ready) => {
     return allGhostwritersAreReady
   }
 }
-
-const voteSubmitGuard = (lobby, socketId) => {
-  const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
-  const talkmasterId = gameExists && lobby.game.talkmasterId
-  const ghostwriterRequestedSubmit = socketId !== talkmasterId
-  if (gameExists && ghostwriterRequestedSubmit) return true
-  return false
-}
-
 const submitVote = (definitionId, playerId, game, ready) => {
   const player = game.players.find(({id}) => id === playerId)
   player.voteId = definitionId
@@ -157,29 +113,16 @@ const submitVote = (definitionId, playerId, game, ready) => {
     player.isReady = true
   }
 }
-
-const definitionTitleSubmitGuard = (lobby, socketId) => {
-  const gameExists = lobby.game && Object.keys(lobby.game).length !== 0
-  const talkmasterId = gameExists && lobby.game.talkmasterId
-  const talkmasterRequestedTitleSubmit = socketId === talkmasterId
-  if (gameExists && talkmasterRequestedTitleSubmit) return true
-  return false
-}
-
 const startPresentPhase = (game) => {
-  //("----------------- START PRESENT PHASE CALLED ----------------")
   game.phase = 'present'
   game.currentPresentedGhostwriterIndex = -1
 }
-
 const getGhostwriters = (game) => {
   return game.players.filter(({id}) => id !== game.talkmasterId)
 }
-
 const getGameDefinition = (game) => {
   return game.definitions.find(({createdBy}) => createdBy === 'game')
 }
-
 const distributePointsForGameDefinition = (game) => {
   const gameDefinition = getGameDefinition(game)
   const playersWhoVotedForGameDefinition = game.players.filter(
@@ -194,13 +137,11 @@ const distributePointsForGameDefinition = (game) => {
       points,
       voteId,
     }))
-  //console.log(playersWhoVotedForGameDefinitionUpdates)
   return {
     definition: gameDefinition,
     players: playersWhoVotedForGameDefinitionUpdates,
   }
 }
-
 const distributePointsForGhostwriterDefinition = (game) => {
   const ghostwriters = getGhostwriters(game)
   const currentPresentedGhostwriter =
@@ -224,30 +165,25 @@ const distributePointsForGhostwriterDefinition = (game) => {
     players: [...playersWhoVotedForCurrentDefinitionUpdates],
   }
 }
-
 const presentNextPlayer = (game) => {
   game.currentPresentedGhostwriterIndex += 1
   const ghostwriters = getGhostwriters(game)
   const isGameDefinition =
     game.currentPresentedGhostwriterIndex === ghostwriters.length
-  //console.log("IS GAME DEFINITION: ", game, isGameDefinition)
   if (isGameDefinition) {
     return distributePointsForGameDefinition(game)
   } else {
     return distributePointsForGhostwriterDefinition(game)
   }
 }
-
 const setVotePhaseEndTimer = (game) => {
   game.timerStart = new Date().getTime()
   return game.timerStart
 }
-
 const unready = (playerId, game) => {
   const readyPlayer = game.players.find(({id}) => id === playerId)
   readyPlayer.isReady = false
 }
-
 const startVotePhase = (game) => {
   game.players
     .filter(({id}) => id !== game.talkmasterId)
@@ -268,25 +204,19 @@ const startVotePhase = (game) => {
     .filter(({id}) => id !== game.talkmasterId)
     .forEach((player) => (player.isReady = false))
 }
-
 const startScoreboardPhase = (game) => {
   game.phase = 'scoreboard'
 }
 
 module.exports = {
-  initGameGuard,
   initGame,
   startDefinePhase,
-  skipTermGuard,
-  defineSubmitGuard,
   submitDefinition,
-  definitionTitleSubmitGuard,
   unready,
   startVotePhase,
   startPresentPhase,
   presentNextPlayer,
   getGhostwriters,
-  voteSubmitGuard,
   submitVote,
   setVotePhaseEndTimer,
   getNumOfUnreadyPlayers,
